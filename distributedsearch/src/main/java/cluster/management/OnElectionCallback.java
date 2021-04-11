@@ -5,8 +5,8 @@ package cluster.management;
  * <p>
  * March 15,2021
  */
-public interface OnElectionCallBack {
-    void onElecterBeLeader();
+public interface OnElectionCallback {
+    void onElectedToBeLeader();
     void onWorker();
     
 }

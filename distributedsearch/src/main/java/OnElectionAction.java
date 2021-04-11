@@ -1,34 +1,51 @@
-import cluster.management.OnElectionCallBack;
-import cluster.management.ServerRegistry;
+import cluster.management.OnElectionCallback;
+import cluster.management.ServiceRegistry;
 import networking.WebServer;
+import org.apache.zookeeper.KeeperException;
 import search.SearchWorker;
+
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  * @author:Nguyen Anh Tuan
  * <p>
  * 11:54 PM ,April 11,2021
  */
-public class OnElectionAction implements OnElectionCallBack {
-    private final ServerRegistry serverRegistry;
+public class OnElectionAction implements OnElectionCallback {
+    private final ServiceRegistry serviceRegistry;
     private final int port;
     private WebServer webServer;
     
-    public OnElectionAction(ServerRegistry serverRegistry, int port) {
-        this.serverRegistry = serverRegistry;
+    public OnElectionAction(ServiceRegistry serviceRegistry, int port) {
+        this.serviceRegistry = serviceRegistry;
         this.port = port;
     }
     
-    
     @Override
-    public void onElecterBeLeader() {
-        serverRegistry.unregistryFromCluster();
-        serverRegistry.registerForUpdate();
-        
+    public void onElectedToBeLeader() {
+        serviceRegistry.unregisterFromCluster();
+        serviceRegistry.registerForUpdates();
     }
     
     @Override
     public void onWorker() {
         SearchWorker searchWorker = new SearchWorker();
-        webServer = new WebServer(port,searchWorker);
+        if (webServer == null) {
+            webServer = new WebServer(port, searchWorker);
+            webServer.startServer();
+        }
+        
+        try {
+            String currentServerAddress =
+                    String.format("http://%s:%d%s", InetAddress.getLocalHost().getCanonicalHostName(), port, searchWorker.getEndpoint());
+            
+            serviceRegistry.registerToCluster(currentServerAddress);
+        } catch (InterruptedException | UnknownHostException | KeeperException e) {
+            e.printStackTrace();
+            return;
+        }
+        
     }
 }
